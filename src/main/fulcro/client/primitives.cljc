@@ -1,6 +1,6 @@
 (ns fulcro.client.primitives
   #?(:cljs (:require-macros fulcro.client.primitives))
-  (:refer-clojure :exclude #?(:clj  [deftype replace var? force]
+  (:refer-clojure :exclude #?(:clj [deftype replace var? force]
                               :cljs [var? key replace force]))
   (:require
     #?@(:clj  [clojure.main
@@ -9,27 +9,28 @@
                [cljs.util]]
         :cljs [[goog.string :as gstring]
                [cljsjs.react]
+               [goog.functions :refer [debounce]]
                [goog.object :as gobj]])
-    [cljs.analyzer :as ana]
-    fulcro-css.css-protocols
-    fulcro-css.css-implementation
-    [clojure.core.async :as async]
-    [clojure.set :as set]
-    [fulcro.history :as hist]
-    [fulcro.logging :as log]
-    [fulcro.tempid :as tempid]
-    [fulcro.transit :as transit]
-    [clojure.zip :as zip]
-    [fulcro.client.impl.data-targeting :as targeting]
-    [fulcro.client.impl.protocols :as p]
-    [fulcro.client.impl.parser :as parser]
-    [fulcro.util :as util]
-    [clojure.walk :refer [prewalk]]
-    [clojure.string :as str]
-    [clojure.spec.alpha :as s]
+               [cljs.analyzer :as ana]
+               fulcro-css.css-protocols
+               fulcro-css.css-implementation
+               [clojure.core.async :as async]
+               [clojure.set :as set]
+               [fulcro.history :as hist]
+               [fulcro.logging :as log]
+               [fulcro.tempid :as tempid]
+               [fulcro.transit :as transit]
+               [clojure.zip :as zip]
+               [fulcro.client.impl.data-targeting :as targeting]
+               [fulcro.client.impl.protocols :as p]
+               [fulcro.client.impl.parser :as parser]
+               [fulcro.util :as util]
+               [clojure.walk :refer [prewalk]]
+               [clojure.string :as str]
+               [clojure.spec.alpha :as s]
     #?(:clj
-       [clojure.future :refer :all])
-    [cognitect.transit :as t])
+               [clojure.future :refer :all])
+               [cognitect.transit :as t])
   #?(:clj
      (:import [java.io Writer])))
 
@@ -3389,3 +3390,26 @@
                  fulcro.client.primitives/*instrument* i#
                  fulcro.client.primitives/*parent*     p#]
          ~@body))))
+
+(defn notify-network-idle!
+  "Schedule a single call of `callback` for the next time we see the network for from busy to non-busy.  The
+   edge-delay-ms is the minimum amount of time that has to elapse before the notification can occur, to ensure that
+   the network is actually considered 'idle'.
+
+   `callback` is a no-args function that will be called once.
+
+   Only works from CLJS."
+  [reconciler callback edge-delay-ms]
+  #?(:cljs
+     (let [trigger (debounce
+                     (fn notify-idle-network [active-remotes]
+                       (when (empty? active-remotes)
+                         (remove-watch (:state reconciler) :active-remotes)
+                         (callback)))
+                     edge-delay-ms)]
+       (add-watch (:state reconciler) :active-remotes
+         (fn [_ _ old-state new-state]
+           (when (not= (:active-remotes old-state) (:active-remotes new-state))
+             (trigger (:active-remotes new-state)))))
+       ;; ensure we get trigger if the network is already idle
+       (trigger (:active-remotes (:active-remotes @(:state reconciler)))))))
