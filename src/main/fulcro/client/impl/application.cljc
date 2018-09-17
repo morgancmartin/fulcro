@@ -250,11 +250,26 @@
           network          (get networking remote)
           sequential?      (is-sequential? network)
           response-channel (get response-channels remote)
+          mark-start       (fn []
+                             (swap! (:state reconciler) update :active-remotes
+                               (fn [m]
+                                 (if (nil? m)
+                                   {remote 1}
+                                   (update m remote inc)))))
+          mark-complete    (fn []
+                             (swap! (:state reconciler) update :active-remotes
+                               (fn [m]
+                                 (if (= 1 (get m remote))
+                                   (dissoc m remote)
+                                   (update m remote dec)))))
           send-complete    (if sequential?
-                             (fn [] (go (async/>! response-channel :complete)))
-                             identity)]
+                             (fn [] (go
+                                      (mark-complete)
+                                      (async/>! response-channel :complete)))
+                             mark-complete)]
       (go
         (loop [payload (async/<! queue)]
+          (mark-start)
           (send-payload network reconciler payload send-complete) ; async call. Calls send-complete when done
           (when sequential?
             (async/<! response-channel))                    ; block until send-complete

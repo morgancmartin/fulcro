@@ -2060,6 +2060,7 @@
   (get-id [_] (:id @state))
   (basis-t [_] (:t @state))
   (get-history [_] history)
+  (active-remotes [_] (:active-remotes @state))
 
   (add-root! [this root-class target options]
     (let [ret      (atom nil)
@@ -2305,13 +2306,15 @@
                          :migrate     migrate
                          :lifecycle   lifecycle
                          :instrument  instrument :tx-listen tx-listen}
-                        (atom {:queue        []
-                               :remote-queue {}
-                               :id           id
-                               :queued       false :queued-sends {}
-                               :sends-queued false
-                               :target       nil :root nil :render nil :remove nil
-                               :t            0 :normalized norm?})
+                        (atom {:queue          []
+                               :remote-queue   {}
+                               :id             id
+                               :active-remotes {}
+                               :queued         false
+                               :queued-sends   {}
+                               :sends-queued   false
+                               :target         nil :root nil :render nil :remove nil
+                               :t              0 :normalized norm?})
                         (atom (hist/new-history history)))]
     ret))
 

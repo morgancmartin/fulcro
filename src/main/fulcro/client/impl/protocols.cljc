@@ -12,6 +12,7 @@
   (tick! [this] "Cause the current basis time to advance")
   (get-id [this] "Get the unique ID of this reconciler. Used to resolve multiple running apps on a page. Defaults to the root class and a UUID.")
   (get-history [this] "Returns the current history atom")
+  (active-remotes [this]  "Returns a map of the active remotes (ones doing network requests). The key is the remote name. The value is how many requests are active on that remote.")
   (basis-t [this])
   (add-root! [reconciler root-class target options])
   (remove-root! [reconciler target])
