@@ -3412,4 +3412,4 @@
            (when (not= (:active-remotes old-state) (:active-remotes new-state))
              (trigger (:active-remotes new-state)))))
        ;; ensure we get trigger if the network is already idle
-       (trigger (:active-remotes (:active-remotes @(:state reconciler)))))))
+       (trigger (:active-remotes @(:state reconciler))))))
